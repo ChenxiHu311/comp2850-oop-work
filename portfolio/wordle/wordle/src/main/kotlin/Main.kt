@@ -1,10 +1,10 @@
-import org.fusesource.jansi.AnsiConsole
+
 
 private const val MAX_ATTEMPTS = 6
 private const val WORDS_FILE = "data/words.txt"
 
 fun main() {
-    AnsiConsole.systemInstall()
+
     val words = Wordle.readWordList(WORDS_FILE)
     if (words.isEmpty()) {
         println("Error: Word list is empty or could not be read.")
@@ -29,5 +29,5 @@ fun main() {
     if (!success) {
         println("Sorry, you've run out of guesses. The word was '$target'.")
     }
-    AnsiConsole.systemUninstall()
+
 }
