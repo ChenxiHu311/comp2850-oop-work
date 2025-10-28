@@ -1,121 +1,91 @@
-import io.kotest.assertions.withClue
-import io.kotest.core.spec.style.StringSpec
-import io.kotest.matchers.collections.shouldBeIn
-import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 
-@Suppress("unused")
+import io.kotest.core.spec.style.StringSpec
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.collections.shouldNotContain
+import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.shouldBe
+import io.kotest.assertions.throwables.shouldThrow
+
 class WordleTest : StringSpec({
 
-    "isValid should return true for valid 5-letter words" {
-        Wordle.isValid("hello") shouldBe true
+    // ----- is_valid -----
+    "is_valid returns true for exactly 5 alphabetic letters" {
+        is_valid("HELLO") shouldBe true
+        is_valid("world") shouldBe true
     }
 
-    "isValid should return false for words less than 5 letters" {
-        Wordle.isValid("four") shouldBe false
+    "is_valid returns false for non-letters or wrong length" {
+        is_valid("abc") shouldBe false            // too short
+        is_valid("longer") shouldBe false         // too long
+        is_valid("he11o") shouldBe false          // digits not allowed
+        is_valid("w.rld") shouldBe false          // punctuation not allowed
+        is_valid("") shouldBe false               // empty
     }
 
-    "isValid should return false for words greater than 5 letters" {
-        Wordle.isValid("longer") shouldBe false
+    // ----- read_word_list -----
+    "read_word_list reads all words from a file" {
+        val tmp = kotlin.io.path.createTempFile(prefix = "words", suffix = ".txt").toFile()
+        tmp.writeText(listOf("apple", "BANANA", "Crane").joinToString("\n"))
+        val words = read_word_list(tmp.absolutePath)
+        words shouldBe mutableListOf("apple", "BANANA", "Crane")
+        tmp.delete()
     }
 
-    "isValid should return true for 5-char words containing numbers" {
-        Wordle.isValid("w0rld") shouldBe true
-    }
-
-    "isValid should return true for 5-char words containing punctuation" {
-        Wordle.isValid("w.rld") shouldBe true
-    }
-
-    "isValid should return false for an empty string" {
-        Wordle.isValid("") shouldBe false
-    }
-
-    "readWordList should read all words from the given file" {
-        val words = Wordle.readWordList("src/test/resources/test_words.txt")
-        words shouldBe listOf(
-            "apple",
-            "banana",
-            "crane",
-        )
-    }
-
-    "readWordList should return an empty list for a non-existent file" {
-        val words = Wordle.readWordList("src/test/resources/non_existent_file.txt")
-        words shouldBe emptyList()
-    }
-
-    "pickRandomWord should return a word from a non-empty list" {
-        val words = mutableListOf("apple", "banana", "crane")
-        val word = Wordle.pickRandomWord(words)
-        word shouldNotBe null
-        withClue("The picked word '$word' should be one of the original words") {
-            word!! shouldBeIn listOf(
-                "apple",
-                "banana",
-                "crane",
-            )
+    "read_word_list throws if file does not exist (as implemented)" {
+        shouldThrow<java.io.FileNotFoundException> {
+            read_word_list("src/test/resources/non_existent_file.txt")
         }
     }
 
-    "pickRandomWord should return the word from a single-element list" {
-        val words = mutableListOf("single")
-        Wordle.pickRandomWord(words) shouldBe "single"
+    // ----- pickRandomWord -----
+    "pickRandomWord returns and removes a word from list" {
+        val words = mutableListOf("apple", "banana", "crane")
+        val beforeSize = words.size
+        val picked = pickRandomWord(words)
+        words shouldHaveSize (beforeSize - 1)
+        // picked should be one of the originals
+        listOf("apple", "banana", "crane") shouldContain picked
+        // and should no longer be in the remaining list
+        words shouldNotContain picked
     }
 
-    "evaluateGuess - perfect match" {
+    "pickRandomWord works for single element list" {
+        val words = mutableListOf("alone")
+        val picked = pickRandomWord(words)
+        picked shouldBe "alone"
+        words shouldHaveSize 0
+    }
+
+    // ----- evaluateGuess -----
+    "evaluateGuess perfect match gives five 1s" {
         val secret = "RULER"
         val guess = "RULER"
-        val expected = listOf(2, 2, 2, 2, 2)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
+        evaluateGuess(guess, secret) shouldBe listOf(1,1,1,1,1)
     }
 
-    "evaluateGuess - case-insensitive perfect match" {
-        val secret = "RULER"
-        val guess = "ruler"
-        val expected = listOf(2, 2, 2, 2, 2)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
-    }
-
-    "evaluateGuess - complete mismatch" {
+    "evaluateGuess mismatch yields 0/1 per position only" {
         val secret = "CRANE"
-        val guess = "BLOCK"
-        val expected = listOf(0, 0, 0, 1, 0)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
+        val guess  = "BLOCK"
+        // Only position 3 (index 3) is 'N' vs 'C' etc.; here none match except maybe at index 3 'C' vs 'N' no
+        // Let's craft a clearer case:
+        val s = "ABCDE"
+        val g = "AXYZE"
+        // positions: A==A ->1, X!=B ->0, Y!=C ->0, Z!=D ->0, E==E ->1
+        evaluateGuess(g, s) shouldBe listOf(1,0,0,0,1)
     }
 
-    "evaluateGuess - partial match with correct and incorrect positions" {
-        val secret = "SOLVE"
-        val guess = "SMILE"
-        val expected = listOf(2, 0, 0, 1, 2)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
+    "evaluateGuess throws for wrong-length inputs" {
+        shouldThrow<IllegalArgumentException> {
+            evaluateGuess("ABCD", "ABCDE")
+        }
+        shouldThrow<IllegalArgumentException> {
+            evaluateGuess("ABCDEF", "ABCDE")
+        }
     }
 
-    "evaluateGuess - duplicate letters in guess, not in secret" {
-        val secret = "CRANE"
-        val guess = "APPLE"
-        val expected = listOf(1, 0, 0, 0, 2)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
-    }
-
-    "evaluateGuess - duplicate letters in secret" {
-        val secret = "SPEED"
-        val guess = "EERIE"
-        val expected = listOf(1, 1, 0, 0, 0)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
-    }
-
-    "evaluateGuess - duplicate letters in guess and secret" {
-        val secret = "BROOK"
-        val guess = "BOOKS"
-        val expected = listOf(2, 1, 2, 1, 0)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
-    }
-
-    "evaluateGuess - another duplicate letters case from old tests" {
-        val secret = "abase"
-        val guess = "erase"
-        val expected = listOf(0, 0, 2, 2, 2)
-        Wordle.evaluateGuess(guess, secret).toList() shouldBe expected
+    // ----- is_correct_guess -----
+    "is_correct_guess returns true only when all positions are 1" {
+        is_correct_guess(listOf(1,1,1,1,1)) shouldBe true
+        is_correct_guess(listOf(1,1,1,1,0)) shouldBe false
     }
 })

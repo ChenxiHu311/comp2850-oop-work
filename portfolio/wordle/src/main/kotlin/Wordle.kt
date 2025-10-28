@@ -1,74 +1,134 @@
-import java.io.File
-import java.io.IOException
 
-object Wordle {
-    const val WORD_LENGTH = 5
+fun generate_random_word(): String {
+    val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    val word = StringBuilder()
 
-    fun isValid(word: String): Boolean = word.length == WORD_LENGTH
-
-    fun readWordList(filename: String): MutableList<String> = try {
-        File(filename).readLines().toMutableList()
-    } catch (e: IOException) {
-        System.err.println("Error reading file: ${e.message}")
-        mutableListOf()
+    // Generate a random 5-letter word
+    for (i in 1..5) {
+        val randomIndex = (0 until letters.length).random()
+        word.append(letters[randomIndex])
     }
 
-    fun pickRandomWord(words: MutableList<String>): String {
-        val word = words.random()
-        words.remove(word)
-        return word
+    return word.toString()
+}
+
+fun generate_wordles(num: Int, filename: String) {
+    // generate `num` wordles, result will be written to `filename`
+    // if `filename` exists, original content will be overwriteen
+    println("generating wordle, need " + num + " words, saving to " + filename)
+
+    val wordList = mutableListOf<String>()
+
+    // Generate random 5-letter words
+    for (i in 1..num) {
+        val randomWord = generate_random_word()
+        wordList.add(randomWord)
     }
 
-    fun obtainGuess(attempt: Int): String {
-        while (true) {
-            print("Attempt $attempt: ")
-            val guess = readLine() ?: ""
-            if (isValid(guess)) {
-                return guess.lowercase()
-            } else {
-                println("无效输入，请输入一个5个字母的单词。")
-            }
+//    println(wordList)
+
+    java.io.File(filename).writeText(wordList.joinToString("\n"))
+    println("Successfully generated $num words and saved to $filename")
+    return
+}
+
+fun read_word_list(filename: String): MutableList<String> {
+    // Reads Wordle target words from the specified file, returning them as a list of strings.
+    return java.io.File(filename).readLines().toMutableList()
+}
+
+fun is_all_letter(word: String): Boolean {
+    for (char in word) {
+        // if (!char.isLetter()) {
+        //     return false
+        // }
+
+        if (char.isLetter()) {
+            continue
+        } else {
+            return false
+        }
+
+        // check if this char is a letter, if this is a letter, continue, else, return false
+    }
+
+    return true
+}
+
+fun is_valid(word: String): Boolean {
+    // Returns true if the given word is valid in Wordle (i.e., if it consists of exactly 5 letters)
+    if (word.length != 5) {
+        return false
+    }
+
+    return is_all_letter(word)
+}
+
+fun pickRandomWord(words: MutableList<String>): String {
+    // Chooses a random word from the given list, removes that word from the list, then returns it.
+
+    // generate a random number from [0, n-1] first
+    var random_index = (0 until words.size).random()
+    var chosen = words[random_index]
+    words.removeAt(random_index)
+    return chosen
+
+}
+
+fun obtainGuess(attempt: Int): String {
+    // Prints a prompt using the given attempt number (e.g. "Attempt 1: "),
+    // then reads a word from stdin. The word should be returned if valid,
+    // otherwise the user should be prompted to try again.
+
+    while (true) {
+        print("Attempt $attempt: ")
+
+        val input = readLine()
+
+        val guess = input?.trim() ?: ""
+
+        if (is_valid(guess)) {
+            return guess
+        } else {
+            println("Please enter exactly 5 letters!")
         }
     }
 
-    fun evaluateGuess(guess: String, secret: String): IntArray {
-        val upperGuess = guess.uppercase()
-        val upperSecret = secret.uppercase()
-        val result = IntArray(WORD_LENGTH) { 0 }
-        val secretCharCounts = upperSecret.groupingBy { it }.eachCount().toMutableMap()
+}
 
-        // First pass: check for correct letters in correct positions (green matches)
-        for (i in upperGuess.indices) {
-            if (upperGuess[i] == upperSecret[i]) {
-                result[i] = 2
-                secretCharCounts[upperGuess[i]] = secretCharCounts.getOrDefault(upperGuess[i], 0) - 1
-            }
-        }
+fun evaluateGuess(guess: String, target: String): List<Int> {
+    // Compares a guess with the target word. Returns a list containing 5 integers,
+    // representing the result of comparison at each letter position.
+    // 0 indicates no match, 1 indicates a match.
 
-        // Second pass: check for correct letters in wrong positions (yellow matches)
-        for (i in upperGuess.indices) {
-            if (result[i] == 0) { // Only check letters that were not a perfect match
-                if (secretCharCounts.getOrDefault(upperGuess[i], 0) > 0) {
-                    result[i] = 1
-                    secretCharCounts[upperGuess[i]] = secretCharCounts.getOrDefault(upperGuess[i], 0) - 1
-                }
-            }
-        }
-
-        return result
+    if (guess.length != 5 || target.length != 5) {
+        throw IllegalArgumentException("guess and target should both contains exactly 5 letters")
     }
 
-    fun displayGuess(guess: String, matches: IntArray) {
-        val sb = StringBuilder()
-        for (i in matches.indices) {
-            val letter = guess[i]
-            when (matches[i]) {
-                2 -> sb.append("\u001B[32m$letter\u001B[0m")
-                1 -> sb.append("\u001B[33m$letter\u001B[0m")
-                0 -> sb.append("\u001B[31m$letter\u001B[0m")
-            }
+    val ans = mutableListOf<Int>()
+    for (i in 0 until 5) {
+        if (guess[i] == target[i]) {
+            ans.add(1)
+        } else {
+            ans.add(0)
         }
-        println(sb.toString())
-        println(matches.joinToString(" "))
     }
+
+    return ans
+}
+
+fun displayGuess(guess: String, matches: List<Int>) {
+    // Displays the letters of a guess that match target word,
+    // or a ‘?’ character where there is no match.
+    var display = ""
+
+    for (i in 0 until 5) {
+        if (matches[i] == 1) {
+            display += guess[i]
+        } else {
+            display += "?"
+        }
+    }
+
+    println(display)
 }
