@@ -1,6 +1,6 @@
 @Suppress("MagicNumber")
 private const val M = 5
-fun generate_random_word(): String {
+fun generateRandomWord(): String {
     val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     val word = StringBuilder()
 
@@ -13,7 +13,7 @@ fun generate_random_word(): String {
     return word.toString()
 }
 
-fun generate_wordles(num: Int, filename: String) {
+fun generateWordles(num: Int, filename: String) {
     // generate `num` wordles, result will be written to `filename`
     // if `filename` exists, original content will be overwriteen
     println("generating wordle, need " + num + " words, saving to " + filename)
@@ -33,12 +33,12 @@ fun generate_wordles(num: Int, filename: String) {
     return
 }
 
-fun read_word_list(filename: String): MutableList<String> {
+fun readWordList(filename: String): MutableList<String> {
     // Reads Wordle target words from the specified file, returning them as a list of strings.
     return java.io.File(filename).readLines().toMutableList()
 }
 
-fun is_all_letter(word: String): Boolean {
+fun isAllLetter(word: String): Boolean {
     for (char in word) {
         // if (!char.isLetter()) {
         //     return false
@@ -56,7 +56,7 @@ fun is_all_letter(word: String): Boolean {
     return true
 }
 
-fun is_valid(word: String): Boolean {
+fun isValid(word: String): Boolean {
     // Returns true if the given word is valid in Wordle (i.e., if it consists of exactly 5 letters)
     if (word.length != M) {
         return false
