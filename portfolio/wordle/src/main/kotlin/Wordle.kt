@@ -1,135 +1,70 @@
-@Suppress("MagicNumber")
-private const val M = 5
-fun generateRandomWord(): String {
-    val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-    val word = StringBuilder()
+import java.io.File             // Allows reading and writing files from the local file system
+import java.nio.charset.Charset // Used to specify character encoding (e.g., UTF-8) when reading text files
+import kotlin.random.Random     // Provides random number generation for selecting random words
 
-    // Generate a random 5-letter word
-    for (i in 1..M) {
-        val randomIndex = (0 until letters.length).random()
-        word.append(letters[randomIndex])
-    }
+// 1) isValid: check whether a word is a valid Wordle guess.
+// A valid word must be exactly 5 characters long and all characters must be letters.
+fun isValid(word: String): Boolean =
+    word.length == 5 && word.all { it.isLetter() }
 
-    return word.toString()
-}
-
-fun generateWordles(num: Int, filename: String) {
-    // generate `num` wordles, result will be written to `filename`
-    // if `filename` exists, original content will be overwriteen
-    println("generating wordle, need " + num + " words, saving to " + filename)
-
-    val wordList = mutableListOf<String>()
-
-    // Generate random 5-letter words
-    for (i in 1..num) {
-        val randomWord = generateRandomWord()
-        wordList.add(randomWord)
-    }
-
-//    println(wordList)
-
-    java.io.File(filename).writeText(wordList.joinToString("\n"))
-    println("Successfully generated $num words and saved to $filename")
-    return
-}
-
+// 2) readWordList: read target words from a file and return them as a mutable list.
+// Each line is trimmed, validated via isValid, then lowercased for consistency.
 fun readWordList(filename: String): MutableList<String> {
-    // Reads Wordle target words from the specified file, returning them as a list of strings.
-    return java.io.File(filename).readLines().toMutableList()
+    val file = File(filename)
+    require(file.exists()) { "Word list not found: $filename" }
+    return file.readLines(Charset.forName("UTF-8"))
+        .map { it.trim() }                // remove leading/trailing whitespace
+        .filter { isValid(it) }           // only keep 5-letter alphabetic words
+        .map { it.lowercase() }           // normalize to lowercase
+        .toMutableList()
 }
 
-fun isAllLetter(word: String): Boolean {
-    for (char in word) {
-        // if (!char.isLetter()) {
-        //     return false
-        // }
-
-        if (char.isLetter()) {
-            continue
-        } else {
-            return false
-        }
-
-        // check if this char is a letter, if this is a letter, continue, else, return false
-    }
-
-    return true
-}
-
-fun isValid(word: String): Boolean {
-    // Returns true if the given word is valid in Wordle (i.e., if it consists of exactly 5 letters)
-    if (word.length != M) {
-        return false
-    }
-
-    return isAllLetter(word)
-}
-
+// 3) pickRandomWord: choose one word at random from the list,
+// remove it from the list (so it won’t be chosen again), and return it.
 fun pickRandomWord(words: MutableList<String>): String {
-    // Chooses a random word from the given list, removes that word from the list, then returns it.
-
-    // generate a random number from [0, n-1] first
-    var randomIndex = (0 until words.size).random()
-    var chosen = words[randomIndex]
-    words.removeAt(randomIndex)
-    return chosen
-
+    require(words.isNotEmpty()) { "Word list is empty" }
+    val idx = Random.nextInt(words.size)  // random index in [0, size)
+    return words.removeAt(idx)            // also mutates the list by removing the chosen word
 }
 
+// 4) obtainGuess: prompt the user (showing the current attempt number),
+// read a line from stdin, trim it, and keep asking until a valid 5-letter word is entered.
 fun obtainGuess(attempt: Int): String {
-    // Prints a prompt using the given attempt number (e.g. "Attempt 1: "),
-    // then reads a word from stdin. The word should be returned if valid,
-    // otherwise the user should be prompted to try again.
-
     while (true) {
         print("Attempt $attempt: ")
+        val guess = readLine()?.trim().orEmpty().lowercase()
 
-        val input = readLine()
+        // Only accept guesses that pass the same validity rules we use elsewhere.
+        if (isValid(guess)) return guess
 
-        val guess = input?.trim() ?: ""
-
-        if (isValid(guess)) {
-            return guess
-        } else {
-            println("Please enter exactly 5 letters!")
-        }
+        // If invalid, tell the user why and prompt again.
+        println("Invalid guess. Please enter exactly 5 letters.")
     }
-
 }
 
+// 5) evaluateGuess (basic version used in this assignment):
+// Compare 'guess' with 'target' position by position and return a list of 5 integers.
+// For each index i: 1 means the letter matches exactly at position i; 0 means it does not.
+// Note: this is the simple 0/1 scoring (no 'present but misplaced' handling).
 fun evaluateGuess(guess: String, target: String): List<Int> {
-    // Compares a guess with the target word. Returns a list containing 5 integers,
-    // representing the result of comparison at each letter position.
-    // 0 indicates no match, 1 indicates a match.
-
-    if (guess.length != M || target.length != M) {
-        throw IllegalArgumentException("guess and target should both contains exactly 5 letters")
+    require(guess.length == 5 && target.length == 5) {
+        "Guess/target must be 5 letters"
     }
-
-    val ans = mutableListOf<Int>()
-    for (i in 0 until M) {
-        if (guess[i] == target[i]) {
-            ans.add(1)
-        } else {
-            ans.add(0)
-        }
-    }
-
-    return ans
+    // Build a 5-element list where each item indicates whether that position matches.
+    return guess.mapIndexed { i, c -> if (c == target[i]) 1 else 0 }
 }
 
+// 6) displayGuess: print the guess in a masked form based on the match results.
+// For every position i: show the actual letter if matches[i] == 1; otherwise print '?'.
+// This gives the user visual feedback while hiding incorrect positions.
 fun displayGuess(guess: String, matches: List<Int>) {
-    // Displays the letters of a guess that match target word,
-    // or a ‘?’ character where there is no match.
-    var display = ""
-
-    for (i in 0 until M) {
-        if (matches[i] == 1) {
-            display += guess[i]
-        } else {
-            display += "?"
+    require(guess.length == 5 && matches.size == 5) {
+        "Guess/matches must be length 5"
+    }
+    val line = buildString {
+        for (i in 0 until 5) {
+            append(if (matches[i] == 1) guess[i] else '?')
         }
     }
-
-    println(display)
+    println(line)
 }
