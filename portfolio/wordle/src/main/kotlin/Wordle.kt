@@ -22,7 +22,7 @@ fun generateWordles(num: Int, filename: String) {
 
     // Generate random 5-letter words
     for (i in 1..num) {
-        val randomWord = generate_random_word()
+        val randomWord = generateRandomWord()
         wordList.add(randomWord)
     }
 
@@ -62,7 +62,7 @@ fun isValid(word: String): Boolean {
         return false
     }
 
-    return is_all_letter(word)
+    return isAllLetter(word)
 }
 
 fun pickRandomWord(words: MutableList<String>): String {
@@ -88,7 +88,7 @@ fun obtainGuess(attempt: Int): String {
 
         val guess = input?.trim() ?: ""
 
-        if (is_valid(guess)) {
+        if (isValid(guess)) {
             return guess
         } else {
             println("Please enter exactly 5 letters!")
@@ -103,7 +103,7 @@ fun evaluateGuess(guess: String, target: String): List<Int> {
     // 0 indicates no match, 1 indicates a match.
 
     if (guess.length != M || target.length != M) {
-        throw illegalArgumentException("guess and target should both contains exactly 5 letters")
+        throw IllegalArgumentException("guess and target should both contains exactly 5 letters")
     }
 
     val ans = mutableListOf<Int>()
