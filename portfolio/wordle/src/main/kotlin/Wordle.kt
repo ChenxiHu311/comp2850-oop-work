@@ -1,10 +1,11 @@
-
+@Suppress("MagicNumber")
+private const val M = 5
 fun generate_random_word(): String {
     val letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     val word = StringBuilder()
 
     // Generate a random 5-letter word
-    for (i in 1..5) {
+    for (i in 1..M) {
         val randomIndex = (0 until letters.length).random()
         word.append(letters[randomIndex])
     }
@@ -57,7 +58,7 @@ fun is_all_letter(word: String): Boolean {
 
 fun is_valid(word: String): Boolean {
     // Returns true if the given word is valid in Wordle (i.e., if it consists of exactly 5 letters)
-    if (word.length != 5) {
+    if (word.length != M) {
         return false
     }
 
@@ -101,12 +102,12 @@ fun evaluateGuess(guess: String, target: String): List<Int> {
     // representing the result of comparison at each letter position.
     // 0 indicates no match, 1 indicates a match.
 
-    if (guess.length != 5 || target.length != 5) {
+    if (guess.length != M || target.length != M) {
         throw IllegalArgumentException("guess and target should both contains exactly 5 letters")
     }
 
     val ans = mutableListOf<Int>()
-    for (i in 0 until 5) {
+    for (i in 0 until M) {
         if (guess[i] == target[i]) {
             ans.add(1)
         } else {
@@ -122,7 +123,7 @@ fun displayGuess(guess: String, matches: List<Int>) {
     // or a ‘?’ character where there is no match.
     var display = ""
 
-    for (i in 0 until 5) {
+    for (i in 0 until M) {
         if (matches[i] == 1) {
             display += guess[i]
         } else {
