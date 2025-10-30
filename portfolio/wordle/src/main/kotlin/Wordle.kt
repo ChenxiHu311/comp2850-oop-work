@@ -69,9 +69,9 @@ fun pickRandomWord(words: MutableList<String>): String {
     // Chooses a random word from the given list, removes that word from the list, then returns it.
 
     // generate a random number from [0, n-1] first
-    var random_index = (0 until words.size).random()
-    var chosen = words[random_index]
-    words.removeAt(random_index)
+    var randomIndex = (0 until words.size).random()
+    var chosen = words[randomIndex]
+    words.removeAt(randomIndex)
     return chosen
 
 }
@@ -103,7 +103,7 @@ fun evaluateGuess(guess: String, target: String): List<Int> {
     // 0 indicates no match, 1 indicates a match.
 
     if (guess.length != M || target.length != M) {
-        throw IllegalArgumentException("guess and target should both contains exactly 5 letters")
+        throw illegalArgumentException("guess and target should both contains exactly 5 letters")
     }
 
     val ans = mutableListOf<Int>()
